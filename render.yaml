@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: rodemnamu-cafe
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: STAFF_PASSWORD
+        value: cafe1234
+      - key: DATA_DIR
+        value: /var/data

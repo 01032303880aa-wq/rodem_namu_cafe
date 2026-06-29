@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>로뎀나무 CAFE</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="order-panel" aria-labelledby="app-title">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">☕</span>
+          <div>
+            <h1 id="app-title">로뎀나무 CAFE</h1>
+            <p>이름을 작성한 뒤 메뉴를 선택해주세요.</p>
+          </div>
+        </div>
+
+        <form id="order-form" class="order-form">
+          <label class="field">
+            <span>이름</span>
+            <input id="customer-name" name="customer-name" type="text" maxlength="20" autocomplete="name" placeholder="예: 민지" required />
+          </label>
+
+          <fieldset class="menu-field">
+            <legend>메뉴</legend>
+            <div class="menu-grid">
+              <label class="menu-option">
+                <input type="radio" name="menu" value="ICE 아메리카노" required />
+                <span><strong>ICE 아메리카노</strong><small>차갑게, 깔끔하게</small></span>
+              </label>
+              <label class="menu-option">
+                <input type="radio" name="menu" value="ICE 카페라떼" />
+                <span><strong>ICE 카페라떼</strong><small>차갑고 부드럽게</small></span>
+              </label>
+              <label class="menu-option">
+                <input type="radio" name="menu" value="HOT 아메리카노" />
+                <span><strong>HOT 아메리카노</strong><small>따뜻하게, 진하게</small></span>
+              </label>
+              <label class="menu-option">
+                <input type="radio" name="menu" value="HOT 카페라떼" />
+                <span><strong>HOT 카페라떼</strong><small>따뜻하고 고소하게</small></span>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="delivery-field">
+            <legend>수령 방법</legend>
+            <div class="choice-row">
+              <label class="choice-option">
+                <input type="radio" name="receive-type" value="픽업" checked />
+                <span>픽업</span>
+              </label>
+              <label class="choice-option">
+                <input type="radio" name="receive-type" value="배달" />
+                <span>배달</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <label id="delivery-location-field" class="field delivery-location" hidden>
+            <span>희망 배달 장소</span>
+            <input id="delivery-location" name="delivery-location" type="text" maxlength="40" placeholder="예: 고3-1 교실" />
+          </label>
+
+          <button id="submit-order" class="primary-button" type="submit">주문하기</button>
+          <p id="form-message" class="form-message" role="status"></p>
+        </form>
+
+        <div id="closed-window" class="closed-window" hidden role="status" aria-live="polite">
+          <strong>주문 마감</strong>
+          <p>현재 로뎀나무 CAFE 주문이 마감되었습니다.</p>
+        </div>
+      </section>
+
+      <section class="cafe-panel" aria-labelledby="staff-title">
+        <div id="staff-login" class="staff-login">
+          <div>
+            <h2 id="staff-title">직원 전용</h2>
+            <p>비밀번호를 입력하면 대기 주문을 확인할 수 있습니다.</p>
+          </div>
+          <form id="staff-login-form" class="staff-form">
+            <label class="field">
+              <span>직원 비밀번호</span>
+              <input id="staff-password" name="staff-password" type="password" autocomplete="current-password" placeholder="비밀번호" required />
+            </label>
+            <button class="primary-button" type="submit">직원 화면 열기</button>
+            <p id="staff-message" class="form-message" role="alert"></p>
+          </form>
+        </div>
+
+        <div id="staff-dashboard" class="staff-dashboard" hidden>
+          <div class="panel-header">
+            <div>
+              <h2 id="cafe-title">카페 확인 화면</h2>
+              <p id="order-count">대기 주문 0건</p>
+              <p id="order-status" class="order-status">주문 가능</p>
+            </div>
+            <div class="staff-actions">
+              <button id="toggle-open" class="close-orders-button" type="button">주문 마감</button>
+              <button id="clear-completed" class="icon-button" type="button" title="완료 주문 정리" aria-label="완료 주문 정리">✓</button>
+              <button id="reset-orders" class="danger-button" type="button">전체 초기화</button>
+              <button id="staff-logout" class="secondary-button" type="button">닫기</button>
+            </div>
+          </div>
+          <div id="order-list" class="order-list" aria-live="polite"></div>
+        </div>
+      </section>
+    </main>
+
+    <template id="order-template">
+      <article class="order-card">
+        <div>
+          <p class="order-name"></p>
+          <p class="order-menu"></p>
+          <p class="order-time"></p>
+        </div>
+        <button class="complete-button" type="button"></button>
+      </article>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
