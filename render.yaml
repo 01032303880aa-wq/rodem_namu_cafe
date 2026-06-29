@@ -8,5 +8,3 @@ services:
     envVars:
       - key: STAFF_PASSWORD
         value: cafe1234
-      - key: DATA_DIR
-        value: /var/data

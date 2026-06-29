@@ -6,15 +6,27 @@ const crypto = require("node:crypto");
 const PORT = Number(process.env.PORT || 3000);
 const STAFF_PASSWORD = process.env.STAFF_PASSWORD || "cafe1234";
 const PUBLIC_DIR = __dirname;
-const DATA_DIR = process.env.DATA_DIR || __dirname;
-const DATA_FILE = path.join(DATA_DIR, "orders.json");
-const SETTINGS_FILE = path.join(DATA_DIR, "settings.json");
+const REQUESTED_DATA_DIR = process.env.DATA_DIR || __dirname;
+let activeDataDir = REQUESTED_DATA_DIR;
+let DATA_FILE = path.join(activeDataDir, "orders.json");
+let SETTINGS_FILE = path.join(activeDataDir, "settings.json");
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8"
 };
+
+async function ensureDataDir() {
+  try {
+    await fs.mkdir(activeDataDir, { recursive: true });
+  } catch {
+    activeDataDir = path.join(__dirname, ".data");
+    DATA_FILE = path.join(activeDataDir, "orders.json");
+    SETTINGS_FILE = path.join(activeDataDir, "settings.json");
+    await fs.mkdir(activeDataDir, { recursive: true });
+  }
+}
 
 async function readOrders() {
   try {
@@ -26,7 +38,7 @@ async function readOrders() {
 }
 
 async function writeOrders(orders) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
+  await ensureDataDir();
   await fs.writeFile(DATA_FILE, JSON.stringify(orders, null, 2), "utf8");
 }
 
@@ -40,7 +52,7 @@ async function readSettings() {
 }
 
 async function writeSettings(settings) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
+  await ensureDataDir();
   await fs.writeFile(SETTINGS_FILE, JSON.stringify(settings, null, 2), "utf8");
 }
 
@@ -207,7 +219,8 @@ const server = http.createServer(async (request, response) => {
       return;
     }
     await serveFile(response, url.pathname);
-  } catch {
+  } catch (error) {
+    console.error(error);
     sendJson(response, 500, { error: "서버 오류가 발생했습니다." });
   }
 });
