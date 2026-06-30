@@ -1,3 +1,37 @@
 {
-  "isOpen": true
+  "isOpen": true,
+  "receiveOptions": {
+    "pickup": true,
+    "delivery": true
+  },
+  "menus": [
+    {
+      "id": "ice-americano",
+      "name": "ICE 아메리카노",
+      "description": "차갑게, 깔끔하게",
+      "imageUrl": "",
+      "soldOut": false
+    },
+    {
+      "id": "ice-latte",
+      "name": "ICE 카페라떼",
+      "description": "차갑고 부드럽게",
+      "imageUrl": "",
+      "soldOut": false
+    },
+    {
+      "id": "hot-americano",
+      "name": "HOT 아메리카노",
+      "description": "따뜻하게, 진하게",
+      "imageUrl": "",
+      "soldOut": false
+    },
+    {
+      "id": "hot-latte",
+      "name": "HOT 카페라떼",
+      "description": "따뜻하고 고소하게",
+      "imageUrl": "",
+      "soldOut": false
+    }
+  ]
 }

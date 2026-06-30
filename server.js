@@ -10,11 +10,23 @@ const REQUESTED_DATA_DIR = process.env.DATA_DIR || __dirname;
 let activeDataDir = REQUESTED_DATA_DIR;
 let DATA_FILE = path.join(activeDataDir, "orders.json");
 let SETTINGS_FILE = path.join(activeDataDir, "settings.json");
+
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8"
+};
+
+const DEFAULT_SETTINGS = {
+  isOpen: true,
+  receiveOptions: { pickup: true, delivery: true },
+  menus: [
+    { id: "ice-americano", name: "ICE 아메리카노", description: "차갑게, 깔끔하게", imageUrl: "", soldOut: false },
+    { id: "ice-latte", name: "ICE 카페라떼", description: "차갑고 부드럽게", imageUrl: "", soldOut: false },
+    { id: "hot-americano", name: "HOT 아메리카노", description: "따뜻하게, 진하게", imageUrl: "", soldOut: false },
+    { id: "hot-latte", name: "HOT 카페라떼", description: "따뜻하고 고소하게", imageUrl: "", soldOut: false }
+  ]
 };
 
 async function ensureDataDir() {
@@ -42,18 +54,43 @@ async function writeOrders(orders) {
   await fs.writeFile(DATA_FILE, JSON.stringify(orders, null, 2), "utf8");
 }
 
+function normalizeSettings(settings) {
+  const source = settings && typeof settings === "object" ? settings : {};
+  const menus = Array.isArray(source.menus) ? source.menus : DEFAULT_SETTINGS.menus;
+  const cleanedMenus = menus
+    .map((menu) => ({
+      id: String(menu.id || crypto.randomUUID()),
+      name: String(menu.name || "").trim().slice(0, 30),
+      description: String(menu.description || "").trim().slice(0, 40),
+      imageUrl: String(menu.imageUrl || "").trim().slice(0, 900000),
+      soldOut: Boolean(menu.soldOut)
+    }))
+    .filter((menu) => menu.name);
+
+  return {
+    isOpen: source.isOpen !== false,
+    receiveOptions: {
+      pickup: source.receiveOptions?.pickup !== false,
+      delivery: source.receiveOptions?.delivery !== false
+    },
+    menus: cleanedMenus.length > 0 ? cleanedMenus : DEFAULT_SETTINGS.menus
+  };
+}
+
 async function readSettings() {
   try {
     const text = await fs.readFile(SETTINGS_FILE, "utf8");
-    return { isOpen: true, ...JSON.parse(text) };
+    return normalizeSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(text) });
   } catch {
-    return { isOpen: true };
+    return normalizeSettings(DEFAULT_SETTINGS);
   }
 }
 
 async function writeSettings(settings) {
+  const cleaned = normalizeSettings(settings);
   await ensureDataDir();
-  await fs.writeFile(SETTINGS_FILE, JSON.stringify(settings, null, 2), "utf8");
+  await fs.writeFile(SETTINGS_FILE, JSON.stringify(cleaned, null, 2), "utf8");
+  return cleaned;
 }
 
 function sendJson(response, statusCode, data) {
@@ -73,7 +110,7 @@ function readBody(request) {
     let body = "";
     request.on("data", (chunk) => {
       body += chunk;
-      if (body.length > 10000) {
+      if (body.length > 2500000) {
         reject(new Error("Request body is too large."));
         request.destroy();
       }
@@ -89,20 +126,20 @@ async function handleApi(request, response, pathname) {
     return;
   }
 
-  if (request.method === "GET" && pathname === "/api/status") {
+  if (request.method === "GET" && (pathname === "/api/settings" || pathname === "/api/status")) {
     sendJson(response, 200, await readSettings());
     return;
   }
 
-  if (request.method === "PATCH" && pathname === "/api/status") {
+  if (request.method === "PATCH" && (pathname === "/api/settings" || pathname === "/api/status")) {
     if (!isStaffRequest(request)) {
       sendJson(response, 401, { error: "직원 비밀번호가 필요합니다." });
       return;
     }
+    const current = await readSettings();
     const body = JSON.parse((await readBody(request)) || "{}");
-    const settings = { isOpen: body.isOpen !== false };
-    await writeSettings(settings);
-    sendJson(response, 200, settings);
+    const next = await writeSettings({ ...current, ...body });
+    sendJson(response, 200, next);
     return;
   }
 
@@ -124,13 +161,21 @@ async function handleApi(request, response, pathname) {
 
     const body = JSON.parse((await readBody(request)) || "{}");
     const name = String(body.name || "").trim().slice(0, 20);
-    const menu = String(body.menu || "").trim();
+    const menuId = String(body.menuId || "").trim();
+    const menu = settings.menus.find((item) => item.id === menuId);
     const receiveType = body.receiveType === "배달" ? "배달" : "픽업";
     const deliveryLocation = receiveType === "배달" ? String(body.deliveryLocation || "").trim().slice(0, 40) : "";
-    const validMenus = new Set(["ICE 아메리카노", "ICE 카페라떼", "HOT 아메리카노", "HOT 카페라떼"]);
 
-    if (!name || !validMenus.has(menu) || (receiveType === "배달" && !deliveryLocation)) {
-      sendJson(response, 400, { error: "주문 정보를 다시 확인해주세요." });
+    if (!name || !menu || menu.soldOut) {
+      sendJson(response, 400, { error: "주문할 수 없는 메뉴입니다." });
+      return;
+    }
+    if (receiveType === "픽업" && !settings.receiveOptions.pickup) {
+      sendJson(response, 400, { error: "현재 픽업 주문을 받을 수 없습니다." });
+      return;
+    }
+    if (receiveType === "배달" && (!settings.receiveOptions.delivery || !deliveryLocation)) {
+      sendJson(response, 400, { error: "배달 장소를 확인해주세요." });
       return;
     }
 
@@ -138,7 +183,8 @@ async function handleApi(request, response, pathname) {
     const order = {
       id: crypto.randomUUID(),
       name,
-      menu,
+      menuId: menu.id,
+      menu: menu.name,
       receiveType,
       deliveryLocation,
       done: false,
