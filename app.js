@@ -18,6 +18,7 @@ const defaultSettings = {
 const form = document.querySelector("#order-form");
 const nameInput = document.querySelector("#customer-name");
 const message = document.querySelector("#form-message");
+const customerOrderList = document.querySelector("#customer-order-list");
 const submitOrderButton = document.querySelector("#submit-order");
 const closedWindow = document.querySelector("#closed-window");
 const menuGrid = document.querySelector("#menu-grid");
@@ -133,6 +134,11 @@ async function saveSettings(nextSettings) {
     saveLocalSettings();
   }
   renderAllSettings();
+}
+
+async function fetchPublicOrders() {
+  if (API_BASE) return apiRequest("/public-orders");
+  return loadLocalOrders();
 }
 
 async function loadOrders() {
@@ -273,6 +279,45 @@ function orderReceiveText(order) {
 
 function formatTime(dateText) {
   return new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit" }).format(new Date(dateText));
+}
+
+function renderCustomerOrders(publicOrders) {
+  if (!customerOrderList) return;
+  customerOrderList.replaceChildren();
+  if (!publicOrders || publicOrders.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = "아직 접수된 주문이 없습니다.";
+    customerOrderList.append(empty);
+    return;
+  }
+
+  publicOrders
+    .slice()
+    .sort((a, b) => Number(a.done) - Number(b.done) || new Date(a.createdAt) - new Date(b.createdAt))
+    .forEach((order) => {
+      const card = document.createElement("article");
+      card.className = "customer-order-card";
+      card.classList.toggle("done", order.done);
+      card.innerHTML = '<div class="customer-order-top"><p class="customer-order-menu"></p><span class="customer-order-state"></span></div><p class="customer-order-detail"></p>';
+      card.querySelector(".customer-order-menu").textContent = order.name + " · " + order.menu;
+      card.querySelector(".customer-order-state").textContent = order.done ? "완료" : "제조중";
+      card.querySelector(".customer-order-detail").textContent = orderReceiveText(order) + " · " + formatTime(order.createdAt) + " 접수";
+      customerOrderList.append(card);
+    });
+}
+
+async function refreshCustomerOrders() {
+  try {
+    renderCustomerOrders(await fetchPublicOrders());
+  } catch {
+    renderCustomerOrders([]);
+  }
+}
+
+function startCustomerRefresh() {
+  refreshCustomerOrders();
+  window.setInterval(refreshCustomerOrders, 3000);
 }
 
 function renderOrders() {
@@ -475,6 +520,7 @@ form.addEventListener("submit", async (event) => {
   try {
     await saveOrder({ name, menuId, receiveType, deliveryLocation });
     await refreshOrders();
+    await refreshCustomerOrders();
     form.reset();
     renderAllSettings({ forceCustomerForm: true });
     nameInput.focus();
@@ -573,3 +619,4 @@ resetOrdersButton.addEventListener("click", async () => {
 loadSettings();
 if (!API_BASE) orders = loadLocalOrders();
 setStaffView(staffAuthed);
+startCustomerRefresh();

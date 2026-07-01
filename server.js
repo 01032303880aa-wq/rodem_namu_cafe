@@ -143,6 +143,20 @@ async function handleApi(request, response, pathname) {
     return;
   }
 
+  if (request.method === "GET" && pathname === "/api/public-orders") {
+    const orders = await readOrders();
+    sendJson(response, 200, orders.map((order) => ({
+      id: order.id,
+      name: order.name,
+      menu: order.menu,
+      receiveType: order.receiveType,
+      deliveryLocation: order.deliveryLocation,
+      done: order.done,
+      createdAt: order.createdAt
+    })));
+    return;
+  }
+
   if (request.method === "GET" && pathname === "/api/orders") {
     if (!isStaffRequest(request)) {
       sendJson(response, 401, { error: "직원 비밀번호가 필요합니다." });
